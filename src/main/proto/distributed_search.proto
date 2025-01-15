@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package ds.searchengine;
+
+option java_package = "proto.generated";
+option java_multiple_files = true;
+service CoordinatorService {
+  rpc RegisterWorker(RegisterRequest) returns (RegisterResponse);
+  rpc AssignTask(TaskRequest) returns (TaskResponse);
+  rpc SubmitResults(ResultRequest) returns (ResultResponse);
+}
+
+service WorkerService {
+  rpc ProcessSearch(SearchRequest) returns (SearchResponse);
+}
+
+
+
+message SearchRequest {
+  string task_id = 1;
+  string query = 2;
+  repeated Document documents = 3;
+}
+
+message SearchResponse {
+  string task_id = 1;
+  repeated SearchResult results = 2;
+}
+
+message Document {
+  string id = 1;
+  string content = 2;
+}
+
+message SearchResult {
+  string document_id = 1;
+  double score = 2;
+}
+
+
+message RegisterRequest {
+  string worker_address = 1;
+}
+
+message RegisterResponse {
+  string status = 1;
+}
+
+message TaskRequest {
+  string task_id = 1;
+  string query = 2;
+}
+
+message TaskResponse {
+  string status = 1;
+}
+
+message ResultRequest {
+  string task_id = 1;
+  string worker_address = 2;
+  repeated string results = 3;
+}
+
+message ResultResponse {
+  string status = 1;
+}
