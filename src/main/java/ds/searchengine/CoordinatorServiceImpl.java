@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Repository
 public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorServiceImplBase {
@@ -77,18 +76,17 @@ public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorSe
 
             SearchResponse response = worker.processSearch(searchRequest);
 
-            // Combine TF scores from worker with IDF scores
-            List<SearchResult> processedResults = response.getResultsList().stream()
-                    .map(result -> {
-                        double score = result.getTermFrequencies().getTermScoresMap().entrySet().stream()
-                                .mapToDouble(entry -> entry.getValue() * idfScores.get(entry.getKey()))
-                                .sum();
-                        return SearchResult.newBuilder()
-                                .setDocumentId(result.getDocumentId())
-                                .setScore(score)
-                                .build();
-                    })
-                    .collect(Collectors.toList());
+            List<SearchResult> processedResults = new ArrayList<>();
+            for (SearchResult searchResult : response.getResultsList()) {
+                double score = searchResult.getTermFrequencies().getTermScoresMap().entrySet().stream()
+                        .mapToDouble(entry -> entry.getValue() * idfScores.get(entry.getKey()))
+                        .sum();
+                SearchResult apply = SearchResult.newBuilder()
+                        .setDocumentId(searchResult.getDocumentId())
+                        .setScore(score)
+                        .build();
+                processedResults.add(apply);
+            }
 
             allResults.add(processedResults);
         }
