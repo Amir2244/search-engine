@@ -15,17 +15,17 @@ public class ResultAggregator {
         for (List<SearchResult> results : workerResults) {
             for (SearchResult result : results) {
                 combinedScores.merge(result.getDocumentId(),
-                                   result.getScore(),
-                                   Double::sum);
+                        result.getScore(),
+                        Double::sum);
             }
         }
 
         return combinedScores.entrySet().stream()
-            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-            .map(entry -> SearchResult.newBuilder()
-                .setDocumentId(entry.getKey())
-                .setScore(entry.getValue())
-                .build())
-            .collect(Collectors.toList());
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .map(entry -> SearchResult.newBuilder()
+                        .setDocumentId(entry.getKey())
+                        .setScore(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
     }
 }
