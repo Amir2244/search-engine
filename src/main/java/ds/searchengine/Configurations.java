@@ -12,21 +12,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Configuration
-public class ZooKeeperConfig {
-    private static final Logger LOGGER = Logger.getLogger(ZooKeeperConfig.class.getName());
+public class Configurations {
+    private static final Logger LOGGER = Logger.getLogger(Configurations.class.getName());
     private static final String ZOOKEEPER_ADDRESS = "localhost:2181";
     private static final int SESSION_TIMEOUT = 5000;
 
     @Bean(destroyMethod = "close")
-    public ZooKeeper zooKeeper() throws Exception {
+    public ZooKeeper zooKeeper() {
         final CountDownLatch connectionLatch = new CountDownLatch(1);
         try {
-            ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, new Watcher() {
-                @Override
-                public void process(WatchedEvent event) {
-                    if (event.getState() == Event.KeeperState.SyncConnected) {
-                        connectionLatch.countDown();
-                    }
+            ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, event -> {
+                if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                    connectionLatch.countDown();
                 }
             });
 
