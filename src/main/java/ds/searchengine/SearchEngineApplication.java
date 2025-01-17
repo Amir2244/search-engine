@@ -4,19 +4,16 @@ import io.grpc.Server;
 import org.apache.zookeeper.ZooKeeper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
 import java.util.logging.Logger;
-import java.util.logging.Level;
 
 @SpringBootApplication
 public class SearchEngineApplication {
-    private static final Logger logger = Logger.getLogger(SearchEngineApplication.class.getName());
-
     public static void main(String[] args) {
-        ApplicationContext context = SpringApplication.run(SearchEngineApplication.class, args);
+        SpringApplication.run(SearchEngineApplication.class, args);
     }
 }
 
@@ -27,27 +24,14 @@ class LeaderElectionInitializer {
     private final LeaderElectionService leaderElection;
     private final Server grpcServer;
     private final OnElectionCallback callback;
+    private final CoordinatorServiceImpl coordinatorService;
 
-    public LeaderElectionInitializer(ZooKeeper zooKeeper, Server grpcServer) {
+    public LeaderElectionInitializer(ZooKeeper zooKeeper, Server grpcServer, CoordinatorServiceImpl coordinatorService, OnElectionCallback callback) {
         this.zooKeeper = zooKeeper;
         this.grpcServer = grpcServer;
-        this.callback = new OnElectionCallback() {
-            @Override
-            public void onElectedToBeLeader() {
-                try {
-                    grpcServer.start();
-                    logger.info("gRPC Server started for leader");
-                } catch (Exception e) {
-                    logger.log(Level.SEVERE, "Failed to start gRPC server", e);
-                }
-            }
-
-            @Override
-            public void onWorker() {
-                logger.info("Node initialized as worker");
-            }
-        };
-        this.leaderElection = new LeaderElectionService(zooKeeper, this.callback);
+        this.callback = callback;
+        this.coordinatorService = coordinatorService;
+        this.leaderElection = new LeaderElectionService(zooKeeper, this.callback, coordinatorService);
     }
 
     @EventListener(ContextRefreshedEvent.class)
