@@ -1,8 +1,8 @@
 package ds.searchengine;
 
 import jakarta.annotation.PostConstruct;
-import proto.generated.Document;
 import org.springframework.stereotype.Component;
+import proto.generated.Document;
 
 import java.io.File;
 import java.io.IOException;

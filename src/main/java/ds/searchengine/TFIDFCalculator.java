@@ -1,6 +1,8 @@
 package ds.searchengine;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TFIDFCalculator {
     private final Map<String, String> documents;

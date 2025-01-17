@@ -1,7 +1,6 @@
 package ds.searchengine;
 
 import io.grpc.stub.StreamObserver;
-
 import org.springframework.stereotype.Component;
 import proto.generated.*;
 

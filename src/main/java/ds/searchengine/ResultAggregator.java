@@ -1,9 +1,12 @@
 package ds.searchengine;
 
-import proto.generated.SearchResult;
 import org.springframework.stereotype.Component;
+import proto.generated.SearchResult;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class ResultAggregator {

@@ -3,7 +3,6 @@ package ds.searchengine;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-
 import org.springframework.stereotype.Repository;
 import proto.generated.*;
 
