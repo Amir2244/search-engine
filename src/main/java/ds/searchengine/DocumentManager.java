@@ -1,20 +1,35 @@
 package ds.searchengine;
 
+import jakarta.annotation.PostConstruct;
 import proto.generated.Document;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.*;
 
 @Component
 public class DocumentManager {
     private final Map<String, Document> allDocuments = new HashMap<>();
 
-    public void addDocument(String id, String content) {
-        Document doc = Document.newBuilder()
-            .setId(id)
-            .setContent(content)
-            .build();
-        allDocuments.put(id, doc);
+    @PostConstruct
+    public List<Document> loadDocuments() {
+        try (InputStream inputStream = getClass().getResourceAsStream("src/main/resources/documents")) {
+            File documentsDir = new File(Objects.requireNonNull(getClass().getResource("/documents")).getFile());
+            for (File file : Objects.requireNonNull(documentsDir.listFiles())) {
+                String content = Files.readString(file.toPath());
+                Document doc = Document.newBuilder()
+                        .setId(file.getName())
+                        .setContent(content)
+                        .build();
+                allDocuments.put(file.getName(), doc);
+            }
+            return new ArrayList<>(allDocuments.values());
+        } catch (IOException e) {
+            throw new InputMismatchException();
+        }
     }
 
     public List<List<Document>> partitionDocuments(int workerCount) {
