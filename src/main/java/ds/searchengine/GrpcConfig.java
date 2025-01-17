@@ -2,6 +2,7 @@ package ds.searchengine;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import org.apache.tomcat.util.threads.VirtualThreadExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,12 +15,8 @@ public class GrpcConfig {
         return ServerBuilder.forPort(9090)
                 .addService(workerService)
                 .addService(coordinatorService)
+                .executor(new VirtualThreadExecutor("VirtualThreadExecutor"))
                 .build();
-    }
-
-    @Bean
-    public WorkerServiceImpl workerService() {
-        return new WorkerServiceImpl();
     }
 
     @Bean
@@ -32,9 +29,4 @@ public class GrpcConfig {
         return new ResultAggregator();
     }
 
-    @Bean
-    public CoordinatorServiceImpl coordinatorService(DocumentManager documentManager,
-                                                     ResultAggregator resultAggregator) {
-        return new CoordinatorServiceImpl(documentManager, resultAggregator);
-    }
 }
