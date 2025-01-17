@@ -1,16 +1,21 @@
 package ds.searchengine;
 
+import io.grpc.Server;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import java.util.concurrent.CountDownLatch;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Configuration
 public class ZooKeeperConfig {
+    private static final Logger LOGGER = Logger.getLogger(ZooKeeperConfig.class.getName());
     private static final String ZOOKEEPER_ADDRESS = "localhost:2181";
-    private static final int SESSION_TIMEOUT = 3000;
+    private static final int SESSION_TIMEOUT = 5000;
 
     @Bean(destroyMethod = "close")
     public ZooKeeper zooKeeper() throws Exception {
@@ -33,16 +38,22 @@ public class ZooKeeperConfig {
     }
 
     @Bean
-    public OnElectionCallback onElectionCallback() {
+    public OnElectionCallback onElectionCallback(Server grpcServer) {
         return new OnElectionCallback() {
             @Override
             public void onElectedToBeLeader() {
-                System.out.println("Starting leader tasks...");
+                try {
+                    grpcServer.start();
+                    LOGGER.info("gRPC Server started for leader");
+                } catch (Exception e) {
+                    grpcServer.shutdown();
+                    LOGGER.log(Level.SEVERE, "Failed to start gRPC server", e);
+                }
             }
 
             @Override
             public void onWorker() {
-                System.out.println("Starting worker tasks...");
+                LOGGER.info("Node initialized as worker");
             }
         };
     }
