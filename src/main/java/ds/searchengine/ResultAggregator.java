@@ -4,7 +4,6 @@ import proto.generated.SearchResult;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class ResultAggregator {
@@ -20,12 +19,16 @@ public class ResultAggregator {
             }
         }
 
-        return combinedScores.entrySet().stream()
-                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                .map(entry -> SearchResult.newBuilder()
-                        .setDocumentId(entry.getKey())
-                        .setScore(entry.getValue())
-                        .build())
-                .collect(Collectors.toList());
+        List<Map.Entry<String, Double>> toSort = new ArrayList<>(combinedScores.entrySet());
+        toSort.sort(Map.Entry.<String, Double>comparingByValue().reversed());
+        List<SearchResult> list = new ArrayList<>();
+        for (Map.Entry<String, Double> entry : toSort) {
+            SearchResult build = SearchResult.newBuilder()
+                    .setDocumentId(entry.getKey())
+                    .setScore(entry.getValue())
+                    .build();
+            list.add(build);
+        }
+        return list;
     }
 }
