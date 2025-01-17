@@ -96,8 +96,10 @@ class LeaderElectionService implements Watcher {
                         byte[] leaderData = zooKeeper.getData(LEADER_INFO_PATH, this, null);
                         String leaderAddress = new String(leaderData);
                         registerWithLeader(leaderAddress);
-                    } catch (Exception e) {
+                    } catch (InterruptedException e) {
                         LOGGER.severe("Failed to register with new leader: " + e.getMessage());
+                    } catch (KeeperException e) {
+                        LOGGER.severe("Failed to contact with new leader: " + e.getMessage());
                     }
                 }
             }

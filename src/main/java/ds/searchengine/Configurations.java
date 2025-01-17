@@ -1,41 +1,73 @@
 package ds.searchengine;
 
 import io.grpc.Server;
+
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.ConnectException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Configuration
-public class Configurations {
+public class Configurations implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(Configurations.class.getName());
-    private static final String ZOOKEEPER_ADDRESS = "localhost:2181";
-    private static final int SESSION_TIMEOUT = 5000;
+    private static final int MAX_RETRIES = 3;
+    private static final int RETRY_DELAY_MS = 1000;
+
+    @Value("${zookeeper.host}")
+    private String host;
+
+    @Value("${zookeeper.port}")
+    private int port;
+
+    @Value("${zookeeper.session_timeout}")
+    private int sessionTimeout;
+
+    @Value("${zookeeper.connection_timeout}")
+    private int connectionTimeout;
 
     @Bean(destroyMethod = "close")
-    public ZooKeeper zooKeeper() throws ConnectException, InterruptedException {
+    public ZooKeeper zooKeeper() throws Exception {
         final CountDownLatch connectionLatch = new CountDownLatch(1);
-        try {
-            try (ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, event -> {
-                if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
-                    connectionLatch.countDown();
-                }
-            })) {
+        String connectString = host + ":" + port;
 
-                connectionLatch.await();
-                return zooKeeper;
+        ZooKeeper zooKeeper = null;
+        int retryCount = 0;
+        ZooKeeper tempZooKeeper = null;
+        while (retryCount < MAX_RETRIES && zooKeeper == null) {
+            try {
+                tempZooKeeper = new ZooKeeper(connectString, sessionTimeout, event -> {
+                    if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                        connectionLatch.countDown();
+                    }
+                });
+                if (!connectionLatch.await(connectionTimeout, TimeUnit.MILLISECONDS)) {
+                    throw new IllegalStateException("Timeout waiting for ZooKeeper connection");
+                }
+                LOGGER.info("Successfully connected to ZooKeeper");
+                zooKeeper = tempZooKeeper;
+                tempZooKeeper = null;
+
+            } catch (Exception e) {
+                LOGGER.warning("Failed to connect to ZooKeeper, attempt " + (retryCount + 1) + " of " + MAX_RETRIES);
+                retryCount++;
+                if (retryCount == MAX_RETRIES) {
+                    throw new IllegalStateException("Failed to connect to ZooKeeper after " + MAX_RETRIES + " attempts", e);
+                }
+                TimeUnit.MILLISECONDS.sleep(RETRY_DELAY_MS);
+            } finally {
+                if (tempZooKeeper != null) {
+                    tempZooKeeper.close();
+                }
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new InterruptedException("Interrupted while waiting for ZooKeeper connection");
-        } catch (Exception e) {
-            throw new ConnectException("Failed to connect to ZooKeeper");
         }
+
+        return zooKeeper;
     }
 
     @Bean
@@ -47,8 +79,8 @@ public class Configurations {
                     grpcServer.start();
                     LOGGER.info("gRPC Server started for leader");
                 } catch (Exception e) {
-                    grpcServer.shutdown();
                     LOGGER.log(Level.SEVERE, "Failed to start gRPC server", e);
+                    grpcServer.shutdown();
                 }
             }
 
@@ -57,5 +89,11 @@ public class Configurations {
                 LOGGER.info("Node initialized as worker");
             }
         };
+    }
+
+    @Override
+    public void close() throws Exception {
+        LOGGER.info("Closing ZooKeeper connection");
+        zooKeeper().close();
     }
 }
