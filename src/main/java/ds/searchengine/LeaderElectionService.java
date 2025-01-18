@@ -124,7 +124,7 @@ class LeaderElectionService implements Watcher {
         RegisterRequest request = RegisterRequest.newBuilder()
                 .setWorkerId(currentZnodeName)
                 .setAddress("localhost")
-                .setPort(9090)
+                .setPort(9091)
                 .build();
 
         RegisterResponse response = stub.registerWorker(request);

@@ -3,6 +3,8 @@ package ds.searchengine;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import proto.generated.*;
 
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Repository
+@Component
 public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorServiceImplBase {
     private final DocumentManager documentManager;
     private final ResultAggregator resultAggregator;
@@ -49,7 +51,6 @@ public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorSe
 
         List<WorkerServiceGrpc.WorkerServiceBlockingStub> availableWorkers =
                 new ArrayList<>(workerStubs.values());
-
         if (availableWorkers.isEmpty()) {
             handleNoWorkersAvailable(responseObserver);
             return;
@@ -69,12 +70,12 @@ public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorSe
 
             SearchRequest searchRequest = SearchRequest.newBuilder()
                     .setTaskId(taskId)
+                    .setWorkerId(workerStubs.keys().nextElement())
                     .setQuery(request.getQuery())
                     .addAllDocuments(workerDocuments)
                     .build();
 
             SearchResponse response = worker.processSearch(searchRequest);
-
             List<SearchResult> processedResults = new ArrayList<>();
             for (SearchResult searchResult : response.getResultsList()) {
                 double score = searchResult.getTermFrequencies().getTermScoresMap().entrySet().stream()

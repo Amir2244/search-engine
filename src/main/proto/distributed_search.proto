@@ -33,6 +33,7 @@ message SearchRequest {
   string taskId = 1;
   string query = 2;
   repeated Document documents = 3;
+  string worker_id = 4;
 }
 
 message SearchResponse {

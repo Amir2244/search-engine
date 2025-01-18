@@ -1,17 +1,14 @@
 package ds.searchengine;
 
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import org.apache.tomcat.util.threads.VirtualThreadExecutor;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Conditional;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Configuration
@@ -19,6 +16,7 @@ public class Configurations implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(Configurations.class.getName());
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 1000;
+    CoordinatorServiceImpl coordinatorService;
 
     @Value("${zookeeper.host}")
     private String host;
@@ -42,16 +40,26 @@ public class Configurations implements AutoCloseable {
         return new ResultAggregator();
     }
 
+    @Bean
+    public SearchEngineLogger searchEngineLogger() {
+        return new SearchEngineLogger();
+    }
 
     @Bean
-    public Server grpcServer(WorkerServiceImpl workerService,
-                             CoordinatorServiceImpl coordinatorService) {
-        return ServerBuilder.forPort(9090)
-                .addService(workerService)
-                .addService(coordinatorService)
-                .executor(new VirtualThreadExecutor("VirtualThreadExecutor"))
-                .build();
+    public OnElectionCallback onElectionCallback() {
+        return new OnElectionCallback() {
+            @Override
+            public void onElectedToBeLeader() {
+                LOGGER.info("Node elected as leader");
+            }
+
+            @Override
+            public void onWorker() {
+                LOGGER.info("Node initialized as worker");
+            }
+        };
     }
+
     @Bean(destroyMethod = "close")
     public ZooKeeper zooKeeper() throws Exception {
         final CountDownLatch connectionLatch = new CountDownLatch(1);
@@ -73,7 +81,6 @@ public class Configurations implements AutoCloseable {
                 LOGGER.info("Successfully connected to ZooKeeper");
                 zooKeeper = tempZooKeeper;
                 tempZooKeeper = null;
-
             } catch (Exception e) {
                 LOGGER.warning("Failed to connect to ZooKeeper, attempt " + (retryCount + 1) + " of " + MAX_RETRIES);
                 retryCount++;
@@ -87,30 +94,7 @@ public class Configurations implements AutoCloseable {
                 }
             }
         }
-
         return zooKeeper;
-    }
-
-
-    @Bean
-    public OnElectionCallback onElectionCallback(Server grpcServer) {
-        return new OnElectionCallback() {
-            @Override
-            public void onElectedToBeLeader() {
-                try {
-                    grpcServer.start();
-                    LOGGER.info("gRPC Server started for leader");
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Failed to start gRPC server", e);
-                    grpcServer.shutdown();
-                }
-            }
-
-            @Override
-            public void onWorker() {
-                LOGGER.info("Node initialized as worker");
-            }
-        };
     }
 
     @Override
