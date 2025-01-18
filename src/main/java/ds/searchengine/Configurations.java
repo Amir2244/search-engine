@@ -42,11 +42,6 @@ public class Configurations implements AutoCloseable {
     }
 
     @Bean
-    public SearchEngineLogger searchEngineLogger() {
-        return new SearchEngineLogger();
-    }
-
-    @Bean
     public OnElectionCallback onElectionCallback() {
         return new OnElectionCallback() {
             @Override
