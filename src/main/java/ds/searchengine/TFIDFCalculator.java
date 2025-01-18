@@ -12,22 +12,22 @@ public class TFIDFCalculator {
     }
 
     public Map<String, Map<String, Double>> computeTermFrequencies(String[] queryTerms) {
-        Map<String, Map<String, Double>> docTermFreqs = new HashMap<>();
+        Map<String, Map<String, Double>> docTermFrequencies = new HashMap<>();
 
         for (Map.Entry<String, String> entry : documents.entrySet()) {
             String docId = entry.getKey();
             String content = entry.getValue();
-            Map<String, Double> termFreqs = new HashMap<>();
+            Map<String, Double> termFrequencies = new HashMap<>();
 
             for (String term : queryTerms) {
                 double tf = computeTF(term, content);
-                termFreqs.put(term, tf);
+                termFrequencies.put(term, tf);
             }
 
-            docTermFreqs.put(docId, termFreqs);
+            docTermFrequencies.put(docId, termFrequencies);
         }
 
-        return docTermFreqs;
+        return docTermFrequencies;
     }
 
     private double computeTF(String term, String document) {
