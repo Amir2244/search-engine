@@ -12,24 +12,24 @@ import proto.generated.RegisterResponse;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Logger;
 
 @Service
 class LeaderElectionService implements Watcher {
-    private static final Logger LOGGER = Logger.getLogger(LeaderElectionService.class.getName());
     private static final String ELECTION_NAMESPACE = "/election";
     private static final String LEADER_INFO_PATH = "/leader_info";
     private final ZooKeeper zooKeeper;
     private final OnElectionCallback onElectionCallback;
+    private final SearchEngineLogger logger;
     private String currentZnodeName;
     private boolean isLeader = false;
 
     @Value("${spring.grpc.server.port}")
     private int serverPort;
 
-    public LeaderElectionService(ZooKeeper zooKeeper, OnElectionCallback onElectionCallback) {
+    public LeaderElectionService(ZooKeeper zooKeeper, OnElectionCallback onElectionCallback, SearchEngineLogger logger) {
         this.zooKeeper = zooKeeper;
         this.onElectionCallback = onElectionCallback;
+        this.logger = logger;
         try {
             ensureElectionNamespace();
         } catch (Exception e) {
@@ -56,7 +56,7 @@ class LeaderElectionService implements Watcher {
     }
 
     public void reelectLeader() throws KeeperException, InterruptedException {
-        String predecessorName = "";
+        String predecessorName;
         Stat predecessorStat = null;
 
         while (predecessorStat == null) {
@@ -66,19 +66,19 @@ class LeaderElectionService implements Watcher {
             String smallestChild = children.getFirst();
             if (smallestChild.equals(currentZnodeName)) {
                 isLeader = true;
-                LOGGER.info("I am the leader: " + currentZnodeName);
+                logger.systemInfo("Node " + currentZnodeName + " elected as leader");
                 publishLeaderInfo();
                 onElectionCallback.onElectedToBeLeader();
                 return;
             } else {
                 isLeader = false;
-                LOGGER.info("I am not the leader");
+                logger.systemInfo("Node " + currentZnodeName + " initialized as worker");
                 int predecessorIndex = children.indexOf(currentZnodeName) - 1;
                 predecessorName = children.get(predecessorIndex);
                 predecessorStat = zooKeeper.exists(ELECTION_NAMESPACE + "/" + predecessorName, this);
                 watchLeaderAndRegister();
                 onElectionCallback.onWorker();
-                LOGGER.info("Watching predecessor znode: " + predecessorName);
+                logger.systemInfo("Watching predecessor znode: " + predecessorName);
             }
         }
     }
@@ -87,9 +87,8 @@ class LeaderElectionService implements Watcher {
         String leaderData = "localhost:" + serverPort;
         byte[] leaderBytes = leaderData.getBytes();
         zooKeeper.setData(LEADER_INFO_PATH, leaderBytes, -1);
-        LOGGER.info("Published new leader info: " + leaderData);
+        logger.systemInfo("Published new leader info: " + leaderData);
     }
-
 
     private void watchLeaderAndRegister() throws KeeperException, InterruptedException {
         Watcher leaderWatcher = new Watcher() {
@@ -100,10 +99,8 @@ class LeaderElectionService implements Watcher {
                         byte[] leaderData = zooKeeper.getData(LEADER_INFO_PATH, this, null);
                         String leaderAddress = new String(leaderData);
                         registerWithLeader(leaderAddress);
-                    } catch (InterruptedException e) {
-                        LOGGER.severe("Failed to register with new leader: " + e.getMessage());
-                    } catch (KeeperException e) {
-                        LOGGER.severe("Failed to contact with new leader: " + e.getMessage());
+                    } catch (InterruptedException | KeeperException e) {
+                        logger.systemError("Failed to register with leader", e);
                     }
                 }
             }
@@ -117,7 +114,7 @@ class LeaderElectionService implements Watcher {
 
     private void registerWithLeader(String leaderAddress) {
         if (isLeader) {
-            LOGGER.info("Skip registration as this node is the leader");
+            logger.systemInfo("Skip registration as this node is the leader");
             return;
         }
 
@@ -137,17 +134,17 @@ class LeaderElectionService implements Watcher {
                 .build();
 
         RegisterResponse response = stub.registerWorker(request);
-        LOGGER.info("Registered with leader. Status: " + response.getStatus() + " on port: " + serverPort);
+        logger.systemInfo("Worker " + currentZnodeName + " registered with leader. Status: " + response.getStatus() + " on port: " + serverPort);
     }
+
     @Override
     public void process(WatchedEvent event) {
         if (event.getType() == Event.EventType.NodeDeleted && !isLeader) {
             try {
                 reelectLeader();
             } catch (Exception e) {
-                LOGGER.severe("Error during leader reelection: " + e.getMessage());
+                logger.systemError("Error during leader reelection", e);
             }
         }
     }
-
 }

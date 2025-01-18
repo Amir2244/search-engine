@@ -8,13 +8,16 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 @Configuration
 public class Configurations implements AutoCloseable {
-    private static final Logger LOGGER = Logger.getLogger(Configurations.class.getName());
+    private final SearchEngineLogger logger;
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 1000;
+
+    public Configurations(SearchEngineLogger logger) {
+        this.logger = logger;
+    }
 
     @Value("${zookeeper.host}")
     private String host;
@@ -48,12 +51,12 @@ public class Configurations implements AutoCloseable {
         return new OnElectionCallback() {
             @Override
             public void onElectedToBeLeader() {
-                LOGGER.info("Node elected as leader");
+                logger.systemInfo("Node elected as leader");
             }
 
             @Override
             public void onWorker() {
-                LOGGER.info("Node initialized as worker");
+                logger.systemInfo("Node initialized as worker");
             }
         };
     }
@@ -76,11 +79,11 @@ public class Configurations implements AutoCloseable {
                 if (!connectionLatch.await(connectionTimeout, TimeUnit.MILLISECONDS)) {
                     throw new IllegalStateException("Timeout waiting for ZooKeeper connection");
                 }
-                LOGGER.info("Successfully connected to ZooKeeper");
+                logger.systemInfo("Successfully connected to ZooKeeper");
                 zooKeeper = tempZooKeeper;
                 tempZooKeeper = null;
             } catch (Exception e) {
-                LOGGER.warning("Failed to connect to ZooKeeper, attempt " + (retryCount + 1) + " of " + MAX_RETRIES);
+                logger.systemError("Failed to connect to ZooKeeper, attempt " + (retryCount + 1) + " of " + MAX_RETRIES, e);
                 retryCount++;
                 if (retryCount == MAX_RETRIES) {
                     throw new IllegalStateException("Failed to connect to ZooKeeper after " + MAX_RETRIES + " attempts", e);
@@ -97,7 +100,7 @@ public class Configurations implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        LOGGER.info("Closing ZooKeeper connection");
+        logger.systemInfo("Closing ZooKeeper connection");
         zooKeeper().close();
     }
 }

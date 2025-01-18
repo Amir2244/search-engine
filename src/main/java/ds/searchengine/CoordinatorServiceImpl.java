@@ -4,6 +4,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 import proto.generated.*;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Conditional(LeaderCondition.class)
 public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorServiceImplBase {
     private final DocumentManager documentManager;
     private final ResultAggregator resultAggregator;
