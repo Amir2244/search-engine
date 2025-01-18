@@ -1,6 +1,8 @@
 package ds.searchengine;
 
 import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import org.apache.tomcat.util.threads.VirtualThreadExecutor;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +32,26 @@ public class Configurations implements AutoCloseable {
     @Value("${zookeeper.connection_timeout}")
     private int connectionTimeout;
 
+    @Bean
+    public DocumentManager documentManager() {
+        return new DocumentManager();
+    }
+
+    @Bean
+    public ResultAggregator resultAggregator() {
+        return new ResultAggregator();
+    }
+
+
+    @Bean
+    public Server grpcServer(WorkerServiceImpl workerService,
+                             CoordinatorServiceImpl coordinatorService) {
+        return ServerBuilder.forPort(9090)
+                .addService(workerService)
+                .addService(coordinatorService)
+                .executor(new VirtualThreadExecutor("VirtualThreadExecutor"))
+                .build();
+    }
     @Bean(destroyMethod = "close")
     public ZooKeeper zooKeeper() throws Exception {
         final CountDownLatch connectionLatch = new CountDownLatch(1);
@@ -68,6 +90,7 @@ public class Configurations implements AutoCloseable {
 
         return zooKeeper;
     }
+
 
     @Bean
     public OnElectionCallback onElectionCallback(Server grpcServer) {
