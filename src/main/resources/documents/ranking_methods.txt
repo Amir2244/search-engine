@@ -1,0 +1,3 @@
+Algorithms are step-by-step procedures for calculations. Search algorithms are particularly important in computer science.
+The TF-IDF algorithm helps determine how important a word is in a document collection. Term frequency measures how often
+a word appears in a document, while inverse document frequency reduces the weight of commonly used words across all documents.

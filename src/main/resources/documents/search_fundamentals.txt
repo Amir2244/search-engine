@@ -1,0 +1,5 @@
+Welcome to our distributed search engine! This is a test document about search engines and distributed systems.
+Search engines use various algorithms to rank documents. The most common ranking algorithms include TF-IDF scoring.
+Distributed systems help us process large amounts of data efficiently. When we distribute the search workload,
+we can handle more documents and process search queries faster. This makes our search engine more scalable.
+The search engine indexes documents and calculates relevance scores to return the most relevant results first.

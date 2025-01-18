@@ -1,0 +1,3 @@
+Distributed computing is a model where components are shared across multiple computers. These systems communicate and
+coordinate actions through message passing. Distributed systems must handle network failures, consistency, and data replication.
+Scaling distributed systems requires careful planning and robust architecture.
