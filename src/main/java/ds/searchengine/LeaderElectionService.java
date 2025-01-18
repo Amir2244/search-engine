@@ -4,7 +4,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import proto.generated.CoordinatorServiceGrpc;
 import proto.generated.RegisterRequest;
 import proto.generated.RegisterResponse;
@@ -13,9 +14,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 
-@Component
+@Service
 class LeaderElectionService implements Watcher {
-
     private static final Logger LOGGER = Logger.getLogger(LeaderElectionService.class.getName());
     private static final String ELECTION_NAMESPACE = "/election";
     private static final String LEADER_INFO_PATH = "/leader_info";
@@ -24,7 +24,10 @@ class LeaderElectionService implements Watcher {
     private String currentZnodeName;
     private boolean isLeader = false;
 
-    public LeaderElectionService(ZooKeeper zooKeeper, OnElectionCallback onElectionCallback, CoordinatorServiceImpl coordinatorService) {
+    @Value("${spring.grpc.server.port}")
+    private int serverPort;
+
+    public LeaderElectionService(ZooKeeper zooKeeper, OnElectionCallback onElectionCallback) {
         this.zooKeeper = zooKeeper;
         this.onElectionCallback = onElectionCallback;
         try {
@@ -60,7 +63,7 @@ class LeaderElectionService implements Watcher {
             List<String> children = zooKeeper.getChildren(ELECTION_NAMESPACE, this);
             Collections.sort(children);
 
-            String smallestChild = children.get(0);
+            String smallestChild = children.getFirst();
             if (smallestChild.equals(currentZnodeName)) {
                 isLeader = true;
                 LOGGER.info("I am the leader: " + currentZnodeName);
@@ -73,19 +76,20 @@ class LeaderElectionService implements Watcher {
                 int predecessorIndex = children.indexOf(currentZnodeName) - 1;
                 predecessorName = children.get(predecessorIndex);
                 predecessorStat = zooKeeper.exists(ELECTION_NAMESPACE + "/" + predecessorName, this);
+                watchLeaderAndRegister();
+                onElectionCallback.onWorker();
+                LOGGER.info("Watching predecessor znode: " + predecessorName);
             }
         }
-
-        watchLeaderAndRegister();
-        onElectionCallback.onWorker();
-        LOGGER.info("Watching predecessor znode: " + predecessorName);
     }
 
     private void publishLeaderInfo() throws KeeperException, InterruptedException {
-        String leaderData = "localhost:9090";
+        String leaderData = "localhost:" + serverPort;
         byte[] leaderBytes = leaderData.getBytes();
         zooKeeper.setData(LEADER_INFO_PATH, leaderBytes, -1);
+        LOGGER.info("Published new leader info: " + leaderData);
     }
+
 
     private void watchLeaderAndRegister() throws KeeperException, InterruptedException {
         Watcher leaderWatcher = new Watcher() {
@@ -112,6 +116,11 @@ class LeaderElectionService implements Watcher {
     }
 
     private void registerWithLeader(String leaderAddress) {
+        if (isLeader) {
+            LOGGER.info("Skip registration as this node is the leader");
+            return;
+        }
+
         String[] hostPort = leaderAddress.split(":");
         ManagedChannel channel = ManagedChannelBuilder
                 .forAddress(hostPort[0], Integer.parseInt(hostPort[1]))
@@ -124,16 +133,15 @@ class LeaderElectionService implements Watcher {
         RegisterRequest request = RegisterRequest.newBuilder()
                 .setWorkerId(currentZnodeName)
                 .setAddress("localhost")
-                .setPort(9091)
+                .setPort(serverPort)
                 .build();
 
         RegisterResponse response = stub.registerWorker(request);
-        LOGGER.info("Registered with leader. Status: " + response.getStatus());
+        LOGGER.info("Registered with leader. Status: " + response.getStatus() + " on port: " + serverPort);
     }
-
     @Override
     public void process(WatchedEvent event) {
-        if (event.getType() == Event.EventType.NodeDeleted) {
+        if (event.getType() == Event.EventType.NodeDeleted && !isLeader) {
             try {
                 reelectLeader();
             } catch (Exception e) {
@@ -141,4 +149,5 @@ class LeaderElectionService implements Watcher {
             }
         }
     }
+
 }

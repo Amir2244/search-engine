@@ -2,13 +2,13 @@ package ds.searchengine;
 
 import io.grpc.stub.StreamObserver;
 import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import proto.generated.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Component
+@Service
 @Conditional(WorkerCondition.class)
 public class WorkerServiceImpl extends WorkerServiceGrpc.WorkerServiceImplBase {
     private final Map<String, String> documentStore = new HashMap<>();

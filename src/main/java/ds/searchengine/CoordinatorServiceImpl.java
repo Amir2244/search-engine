@@ -3,9 +3,8 @@ package ds.searchengine;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
+
+import org.springframework.stereotype.Service;
 import proto.generated.*;
 
 import java.util.ArrayList;
@@ -14,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
+@Service
 public class CoordinatorServiceImpl extends CoordinatorServiceGrpc.CoordinatorServiceImplBase {
     private final DocumentManager documentManager;
     private final ResultAggregator resultAggregator;

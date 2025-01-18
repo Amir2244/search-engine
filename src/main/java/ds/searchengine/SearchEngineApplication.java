@@ -6,8 +6,6 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-
-
 @SpringBootApplication
 public class SearchEngineApplication {
     public static void main(String[] args) {
@@ -18,6 +16,7 @@ public class SearchEngineApplication {
 @Component
 class LeaderElectionInitializer {
     private final LeaderElectionService leaderElection;
+    private boolean initialized = false;
 
     public LeaderElectionInitializer(LeaderElectionService leaderElectionService) {
         this.leaderElection = leaderElectionService;
@@ -25,7 +24,10 @@ class LeaderElectionInitializer {
 
     @EventListener(ContextRefreshedEvent.class)
     public void initializeLeaderElection() throws Exception {
-        leaderElection.volunteerForLeadership();
-        leaderElection.reelectLeader();
+        if (!initialized) {
+            leaderElection.volunteerForLeadership();
+            leaderElection.reelectLeader();
+            initialized = true;
+        }
     }
 }

@@ -5,7 +5,6 @@ import org.apache.zookeeper.ZooKeeper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Conditional;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +15,6 @@ public class Configurations implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(Configurations.class.getName());
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 1000;
-    CoordinatorServiceImpl coordinatorService;
 
     @Value("${zookeeper.host}")
     private String host;
