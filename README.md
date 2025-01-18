@@ -1,6 +1,6 @@
 # Search Engine Project
 
-A modern search engine built with Spring Boot and gRPC capabilities.
+A modern search engine built with Spring Boot and gRPC capabilities and use TF-IDF algorithm to calculate the similarity between search queries and documents.
 
 ## Project Setup
 
