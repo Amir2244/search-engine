@@ -31,15 +31,7 @@ public class Configurations implements AutoCloseable {
     @Value("${zookeeper.connection_timeout}")
     private int connectionTimeout;
 
-    @Bean
-    public DocumentManager documentManager() {
-        return new DocumentManager();
-    }
 
-    @Bean
-    public ResultAggregator resultAggregator() {
-        return new ResultAggregator();
-    }
 
     @Bean
     public OnElectionCallback onElectionCallback() {

@@ -44,7 +44,7 @@ class LeaderElectionService implements Watcher {
         }
         if (zooKeeper.exists(LEADER_INFO_PATH, false) == null) {
             zooKeeper.create(LEADER_INFO_PATH, new byte[]{},
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
     }
 
